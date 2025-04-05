@@ -60,7 +60,16 @@ def convert_coco_to_yolo(coco_path, img_dir, output_dir, dataset_type):
                     category_id = cat_id_to_cont_id[ann['category_id']]
                     f.write(f"{category_id} {yolo_bbox[0]} {yolo_bbox[1]} {yolo_bbox[2]} {yolo_bbox[3]}\n")
         
-        os.system(f"cp {img_path} {os.path.join(output_dir, 'images', dataset_type, img_name)}")
+        # Replace os.system cp with creating symbolic link
+        try:
+            src_img_path = os.path.abspath(img_path)
+            dst_img_path = os.path.join(output_dir, 'images', dataset_type, img_name)
+            if os.path.exists(dst_img_path):
+                os.remove(dst_img_path)
+            os.symlink(src_img_path, dst_img_path)
+        except OSError as e:
+            print(f"Error creating symlink for {img_name}: {e}")
+            continue
 
 print("Starting conversion...")
 # Convert training dataset
