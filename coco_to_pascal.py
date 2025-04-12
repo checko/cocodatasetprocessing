@@ -79,7 +79,7 @@ def convert_coco_to_pascal(coco_path, img_dir, output_dir):
             img_to_anns[img_id] = []
         img_to_anns[img_id].append(ann)
     
-    # Create train.txt
+    # Create train.txt - only for images that have annotations
     train_txt = []
     
     # Process each image
@@ -88,7 +88,12 @@ def convert_coco_to_pascal(coco_path, img_dir, output_dir):
         img_name = img['file_name']
         img_path = os.path.join(img_dir, img_name)
         
+        # Skip if image file doesn't exist
         if not os.path.exists(img_path):
+            continue
+        
+        # Skip if image has no annotations
+        if img_id not in img_to_anns:
             continue
             
         # Create symbolic link for image
@@ -98,19 +103,18 @@ def convert_coco_to_pascal(coco_path, img_dir, output_dir):
             os.remove(dst_img_path)
         os.symlink(src_img_path, dst_img_path)
         
-        # Add to train.txt
+        # Add to train.txt only if it has annotations
         train_txt.append(os.path.splitext(img_name)[0])
         
-        # Create XML annotation if annotations exist
-        if img_id in img_to_anns:
-            xml_root = create_xml_annotation(img, img_to_anns[img_id], 
-                                          coco['categories'], dst_img_path)
-            
-            # Save XML file
-            xml_path = os.path.join(output_dir, 'labels', 
-                                  os.path.splitext(img_name)[0] + '.xml')
-            tree = ElementTree(xml_root)
-            tree.write(xml_path, encoding='utf-8', xml_declaration=True)
+        # Create XML annotation
+        xml_root = create_xml_annotation(img, img_to_anns[img_id], 
+                                      coco['categories'], dst_img_path)
+        
+        # Save XML file
+        xml_path = os.path.join(output_dir, 'labels', 
+                              os.path.splitext(img_name)[0] + '.xml')
+        tree = ElementTree(xml_root)
+        tree.write(xml_path, encoding='utf-8', xml_declaration=True)
     
     # Write train.txt
     with open(os.path.join(output_dir, 'train.txt'), 'w') as f:
