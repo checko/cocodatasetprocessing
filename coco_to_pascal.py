@@ -66,6 +66,11 @@ def convert_coco_to_pascal(coco_path, img_dir, output_dir):
     with open(coco_path, 'r') as f:
         coco = json.load(f)
     
+    # Extract and save class names to classes.txt
+    class_names = [cat['name'] for cat in coco['categories']]
+    with open(os.path.join(output_dir, 'classes.txt'), 'w') as f:
+        f.write('\n'.join(class_names))
+    
     # Create image id to annotations mapping
     img_to_anns = {}
     for ann in coco['annotations']:
