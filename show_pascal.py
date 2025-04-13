@@ -85,19 +85,15 @@ class PascalVOCViewer:
             
             # Validate annotations
             has_errors = False
-            print(f"\nChecking {image_name} ({self.current_idx + 1}/{len(self.image_list)})")
-            print(f"Number of objects: {len(objects)}")
             
             for i, obj in enumerate(objects):
                 errors = self.validate_bbox(obj['bbox'], image.shape)
                 if errors:
                     has_errors = True
-                    print(f"  Object {i+1} ({obj['name']}) has errors:")
+                    print(f"{image_name} ({self.current_idx + 1}/{len(self.image_list)})")
+                    print(f"  Object {i+1}/{len(objects)} ({obj['name']}) has errors:")
                     for error in errors:
                         print(f"    - {error}")
-            
-            if not has_errors:
-                print("  No validation errors found")
             
             return has_errors
         return False
