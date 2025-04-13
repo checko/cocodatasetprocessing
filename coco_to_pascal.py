@@ -117,7 +117,7 @@ def convert_coco_to_pascal(coco_path, img_dir, output_dir):
         tree.write(xml_path, encoding='utf-8', xml_declaration=True)
     
     # Write train.txt
-    with open(os.path.join(output_dir, 'train.txt'), 'w') as f:
+    with open(os.path.join(output_dir, 'val.txt'), 'w') as f:
         f.write('\n'.join(train_txt))
 
 if __name__ == "__main__":
@@ -125,8 +125,8 @@ if __name__ == "__main__":
     
     # Convert training dataset
     convert_coco_to_pascal(
-        'annotations/instances_train2014.json',
-        'train2014',
+        'annotations/instances_val2014.json',
+        'val2014',
         'pascal_coco'
     )
     
