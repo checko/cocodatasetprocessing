@@ -5,11 +5,12 @@ import numpy as np
 import argparse
 
 class PascalVOCViewer:
-    def __init__(self, pascal_dir, auto_mode=False):
+    def __init__(self, pascal_dir, auto_mode=False, batch_mode=False):
         self.pascal_dir = pascal_dir
         self.images_dir = os.path.join(pascal_dir, 'images')
         self.labels_dir = os.path.join(pascal_dir, 'labels')
         self.auto_mode = auto_mode
+        self.batch_mode = batch_mode
         
         # Read train.txt to get the list of images
         with open(os.path.join(pascal_dir, 'train.txt'), 'r') as f:
@@ -18,9 +19,10 @@ class PascalVOCViewer:
         self.current_idx = 0
         self.window_name = 'Pascal VOC Annotation Viewer'
         
-        # Create colors for different classes
-        np.random.seed(42)
-        self.colors = np.random.randint(0, 255, size=(100, 3), dtype=np.uint8)
+        # Create colors for different classes (not used in batch mode)
+        if not batch_mode:
+            np.random.seed(42)
+            self.colors = np.random.randint(0, 255, size=(100, 3), dtype=np.uint8)
 
     def validate_bbox(self, bbox, image_shape):
         """Validate bounding box coordinates"""
@@ -66,6 +68,40 @@ class PascalVOCViewer:
             })
         return objects
 
+    def validate_current_image(self):
+        """Validate annotations for current image without displaying it"""
+        if 0 <= self.current_idx < len(self.image_list):
+            image_name = self.image_list[self.current_idx]
+            img_path = os.path.join(self.images_dir, f'{image_name}.jpg')
+            xml_path = os.path.join(self.labels_dir, f'{image_name}.xml')
+            
+            # Read image and annotations
+            image = cv2.imread(img_path)
+            if image is None:
+                print(f"Error: Could not read image {img_path}")
+                return False
+            
+            objects = self.read_xml_annotation(xml_path)
+            
+            # Validate annotations
+            has_errors = False
+            print(f"\nChecking {image_name} ({self.current_idx + 1}/{len(self.image_list)})")
+            print(f"Number of objects: {len(objects)}")
+            
+            for i, obj in enumerate(objects):
+                errors = self.validate_bbox(obj['bbox'], image.shape)
+                if errors:
+                    has_errors = True
+                    print(f"  Object {i+1} ({obj['name']}) has errors:")
+                    for error in errors:
+                        print(f"    - {error}")
+            
+            if not has_errors:
+                print("  No validation errors found")
+            
+            return has_errors
+        return False
+
     def draw_annotations(self, image, objects, validation_errors=None):
         """Draw bounding boxes and labels on the image"""
         for i, obj in enumerate(objects):
@@ -91,6 +127,9 @@ class PascalVOCViewer:
 
     def show_current_image(self):
         """Show current image with annotations"""
+        if self.batch_mode:
+            return self.validate_current_image()
+        
         if 0 <= self.current_idx < len(self.image_list):
             image_name = self.image_list[self.current_idx]
             img_path = os.path.join(self.images_dir, f'{image_name}.jpg')
@@ -133,7 +172,24 @@ class PascalVOCViewer:
 
     def run(self):
         """Main viewing loop"""
-        cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
+        if not self.batch_mode:
+            cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
+        
+        print("Starting validation...")
+        if self.batch_mode:
+            total_images = len(self.image_list)
+            images_with_errors = 0
+            
+            while self.current_idx < total_images:
+                if self.validate_current_image():
+                    images_with_errors += 1
+                self.current_idx += 1
+            
+            print(f"\nValidation complete!")
+            print(f"Total images processed: {total_images}")
+            print(f"Images with errors: {images_with_errors}")
+            print(f"Success rate: {((total_images - images_with_errors) / total_images) * 100:.2f}%")
+            return
         
         print("Controls:")
         if not self.auto_mode:
@@ -169,10 +225,15 @@ class PascalVOCViewer:
         cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Pascal VOC Annotation Viewer')
+    parser = argparse.ArgumentParser(description='Pascal VOC Annotation Viewer/Validator')
     parser.add_argument('-a', '--auto', action='store_true',
                       help='Enable auto-advance mode (pause only on validation errors)')
+    parser.add_argument('-b', '--batch', action='store_true',
+                      help='Run in batch mode (validate all images without displaying)')
     args = parser.parse_args()
     
-    viewer = PascalVOCViewer('pascal_coco', auto_mode=args.auto)
+    if args.auto and args.batch:
+        print("Warning: Auto mode (-a) is ignored in batch mode (-b)")
+    
+    viewer = PascalVOCViewer('pascal_coco', auto_mode=args.auto, batch_mode=args.batch)
     viewer.run()
