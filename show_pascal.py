@@ -44,11 +44,7 @@ class PascalVOCViewer:
             errors.append(f"X-coordinates ({xmin}, {xmax}) out of image width ({width})")
         if ymin >= height or ymax > height:
             errors.append(f"Y-coordinates ({ymin}, {ymax}) out of image height ({height})")
-        
-        # Check if bounding box is too small (optional, minimum 5x5 pixels)
-        if (xmax - xmin) < 5 or (ymax - ymin) < 5:
-            errors.append(f"Bounding box too small: {xmax-xmin}x{ymax-ymin} pixels")
-            
+               
         return errors
 
     def read_xml_annotation(self, xml_path):
