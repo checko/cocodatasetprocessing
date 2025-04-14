@@ -37,7 +37,7 @@ This repository contains a collection of tools for converting and verifying COCO
 ### 1. Converting COCO to Pascal VOC
 
 ```bash
-python coco_to_pascal.py
+python coco_to_pascal.py [--output-dir OUTPUT_DIR] [-c CLASSES_FILE] [--generate-classes]
 ```
 
 This script:
@@ -46,6 +46,27 @@ This script:
 - Generates train.txt and val.txt files
 - Handles invalid bounding boxes by fixing or filtering them
 - Provides conversion statistics
+- Supports filtering specific classes using a text file
+- Can generate a list of all available classes
+
+Options:
+- `--output-dir`: Specify output directory (default: 'pascal_coco')
+- `-c, --classes-file`: Path to a text file containing the list of classes to convert
+- `--generate-classes`: Generate classes.txt containing all available COCO classes
+
+Example workflow:
+1. First, generate a list of all available classes:
+   ```bash
+   python coco_to_pascal.py --generate-classes
+   ```
+   This will create classes.txt with all COCO classes.
+
+2. Create your own targetclass.txt with the classes you want to convert (one class per line)
+
+3. Convert only the specified classes:
+   ```bash
+   python coco_to_pascal.py -c targetclass.txt
+   ```
 
 ### 2. Converting COCO to YOLO
 
