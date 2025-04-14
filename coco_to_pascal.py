@@ -2,6 +2,7 @@ import os
 import json
 from xml.etree.ElementTree import Element, SubElement, ElementTree
 import shutil
+import argparse
 
 def create_pascal_voc_dirs(output_dir):
     """Create Pascal VOC directory structure"""
@@ -137,7 +138,7 @@ def create_xml_annotation(img_data, annotations, categories, img_path):
     
     return root, filtered_count, fixed_count, len(filtered_annotations) > 0
 
-def convert_coco_to_pascal(coco_path, img_dir, output_dir, dataset_type):
+def convert_coco_to_pascal(coco_path, img_dir, output_dir, dataset_type, target_classes=None):
     """Convert COCO format to Pascal VOC format"""
     # Create output directories if they don't exist
     create_pascal_voc_dirs(output_dir)
@@ -185,9 +186,14 @@ def convert_coco_to_pascal(coco_path, img_dir, output_dir, dataset_type):
         if img_id not in img_to_anns:
             continue
             
+        # Filter annotations by target classes if specified
+        annotations = img_to_anns[img_id]
+        if target_classes:
+            annotations = [ann for ann in annotations if coco['categories'][ann['category_id'] - 1]['name'] in target_classes]
+        
         # Create XML annotation and get statistics
         xml_root, filtered_count, fixed_count, has_valid_annotations = create_xml_annotation(
-            img, img_to_anns[img_id], coco['categories'], img_path
+            img, annotations, coco['categories'], img_path
         )
         
         # Skip if no valid annotations remain
@@ -225,9 +231,49 @@ def convert_coco_to_pascal(coco_path, img_dir, output_dir, dataset_type):
     print(f"Total annotations filtered out: {total_filtered}")
     print(f"Total annotations fixed: {total_fixed}")
 
+def get_coco_classes(coco_annotation_file):
+    """Extract all classes from COCO annotation file"""
+    with open(coco_annotation_file, 'r') as f:
+        coco = json.load(f)
+    return sorted([cat['name'] for cat in coco['categories']])
+
+def save_classes_list(classes, output_file):
+    """Save list of classes to a file"""
+    with open(output_file, 'w') as f:
+        f.write('\n'.join(classes))
+
+def load_target_classes(class_file):
+    """Load target classes from file"""
+    if not os.path.exists(class_file):
+        raise FileNotFoundError(f"Target class file {class_file} not found")
+    with open(class_file, 'r') as f:
+        return {line.strip() for line in f if line.strip()}
+
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Convert COCO dataset to Pascal VOC format')
+    parser.add_argument('--output-dir', default='pascal_coco', help='Output directory for Pascal VOC dataset')
+    parser.add_argument('-c', '--classes-file', help='File containing list of classes to convert')
+    parser.add_argument('--generate-classes', action='store_true', 
+                      help='Generate classes.txt from COCO annotation file')
+    args = parser.parse_args()
+
+    if args.generate_classes:
+        print("Generating classes list from COCO annotations...")
+        classes = get_coco_classes('annotations/instances_train2014.json')
+        save_classes_list(classes, 'classes.txt')
+        print(f"Classes list saved to classes.txt")
+        print("Available classes:")
+        print('\n'.join(classes))
+        exit(0)
+
+    output_dir = args.output_dir
+    target_classes = None
+    if args.classes_file:
+        print(f"Loading target classes from {args.classes_file}")
+        target_classes = load_target_classes(args.classes_file)
+        print(f"Will only convert the following classes: {', '.join(sorted(target_classes))}")
+
     print("Starting conversion to Pascal VOC format...")
-    output_dir = 'pascal_coco'
     
     # Convert training dataset
     print("\nConverting training dataset...")
@@ -235,7 +281,8 @@ if __name__ == "__main__":
         'annotations/instances_train2014.json',
         'train2014',
         output_dir,
-        'train'
+        'train',
+        target_classes
     )
     
     # Convert validation dataset
@@ -244,7 +291,8 @@ if __name__ == "__main__":
         'annotations/instances_val2014.json',
         'val2014',
         output_dir,
-        'val'
+        'val',
+        target_classes
     )
     
     print("Conversion complete!")
