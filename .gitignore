@@ -1,6 +1,8 @@
 annotations/
 train2014/
 val2014/
+train2017/
+val2017/
 yolov3_dataset/
 pascal_coco/
 mydata/
