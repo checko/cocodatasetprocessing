@@ -147,9 +147,17 @@ def convert_coco_to_pascal(coco_path, img_dir, output_dir, dataset_type, target_
     with open(coco_path, 'r') as f:
         coco = json.load(f)
     
+    # Create category ID to name mapping
+    cat_id_to_name = {cat['id']: cat['name'] for cat in coco['categories']}
+    
     # Extract and save class names to classes.txt (only for first dataset)
     if not os.path.exists(os.path.join(output_dir, 'classes.txt')):
-        class_names = [cat['name'] for cat in coco['categories']]
+        if target_classes:
+            # If target classes are specified, only write those classes
+            class_names = sorted(list(target_classes))
+        else:
+            # Otherwise write all classes
+            class_names = [cat['name'] for cat in coco['categories']]
         with open(os.path.join(output_dir, 'classes.txt'), 'w') as f:
             f.write('\n'.join(class_names))
     
@@ -189,7 +197,7 @@ def convert_coco_to_pascal(coco_path, img_dir, output_dir, dataset_type, target_
         # Filter annotations by target classes if specified
         annotations = img_to_anns[img_id]
         if target_classes:
-            annotations = [ann for ann in annotations if coco['categories'][ann['category_id'] - 1]['name'] in target_classes]
+            annotations = [ann for ann in annotations if cat_id_to_name[ann['category_id']] in target_classes]
         
         # Create XML annotation and get statistics
         xml_root, filtered_count, fixed_count, has_valid_annotations = create_xml_annotation(
